@@ -93,6 +93,16 @@ let main argv =
     let prediction = trainedModel.Transform(transformedTestData)
     let metrics = mlContext.Regression.Evaluate(prediction, label = "Label", score = "Score")
     Console.WriteLine("The model evaluation metrics rms: " + string(metrics.Rms))
+
+    let predictionengine = trainedModel.CreatePredictionEngine<MovieRating, MovieRatingPrediction>(mlContext)
+    // Make a single movie rating prediction, the scores are for a particular user and will range from 1 - 5.
+    // The higher the score the higher the likelyhood of a user liking a particular movie.
+    // You can recommend a movie to a user if say rating > 3.5.
+    //
+    // Example rating prediction for userId = 6, movieId = 10 (GoldenEye)
+    // let example = { UserId = 6.; MovieId = 10.; Label = single(1) }
+    // let movieratingPrediction = predictionengine.Predict(example)
+
     Console.WriteLine("=============== End of process, hit any key to finish ===============")
     Console.ReadLine()
 
