@@ -1,11 +1,12 @@
-﻿// Learn more about F# at http://fsharp.org
+﻿open System
+open System.IO
 
-open System
 open Microsoft.ML
+open Microsoft.ML.Trainers
+
+open Microsoft.ML.Data
 open Microsoft.ML.Core.Data
 open Microsoft.ML.Trainers.Recommender
-open Microsoft.ML.Data
-open System.IO
 
 [<CLIMutable>]
 type Movie =
@@ -49,52 +50,50 @@ let downcastPipeline (pipeline : IEstimator<'a>) =
 [<EntryPoint>]
 let main argv =
 
-    // Create MLContext to be shared across the model creation workflow objects 
+    // Create MLContext to be shared across the model creation workflow objects
     // Set a random seed for repeatable/deterministic results across multiple trainings.
     let mlContext = MLContext(seed = Nullable 0)
 
-    let reader location = 
+    let reader location =
         mlContext.Data.ReadFromTextFile<MovieRating>(location, hasHeader = true, separatorChar = ',')
 
-    let textLoader = 
+    let textLoader =
        mlContext.Data.CreateTextReader(
-           columns = 
+           columns =
                [|
                    TextLoader.Column("MovieId", Nullable DataKind.R8, 2)
                    TextLoader.Column("MovieTitle", Nullable DataKind.R8, 3)
                |],
-           hasHeader = true, 
+           hasHeader = true,
            separatorChar = ','
        )
 
     let trainingData = reader trainingDataLocation
-    printfn "data %O" (trainingData.Preview(5))
 
     let testData = reader testDataLocation
 
-    let dataProcessingPipeline = 
+    let dataProcessingPipeline =
         (mlContext.Transforms.Conversion.MapValueToKey("UserId","UserIdEncoded") |> downcastPipeline)
          .Append(mlContext.Transforms.Conversion.MapValueToKey("MovieId","MovieIdEncoded")) |> downcastPipeline
 
     let matrixFactorizationTrainer =
+        let options = MatrixFactorizationTrainer.Arguments()
+        options.NumIterations <- 20
+        options.K <- 100
         mlContext.Recommendation().Trainers.MatrixFactorization("UserIdEncoded", "MovieIdEncoded", "Label")
 
+    Console.WriteLine("=============== Training the model ===============");
     let transformer = dataProcessingPipeline.Fit(trainingData)
     let transformedTrainingData = transformer.Transform(trainingData)
-    let transformedTestData = transformer.Transform(testData)
-
-    printfn "data %O" (transformedTrainingData.Preview(5))
-
     let trainedModel =
         matrixFactorizationTrainer.Fit(transformedTrainingData)
 
-    let predictions = trainedModel.Transform(transformedTestData)
-    for col in predictions.Schema do
-        printfn "col %O" col
-
-    let metrics = mlContext.Regression.Evaluate(predictions, label = "Label", score = "Score")
-
-    printfn "metrics: %O" metrics.Rms
-
+    Console.WriteLine("=============== Evaluating the model ===============")
+    let transformedTestData = transformer.Transform(testData)
+    let prediction = trainedModel.Transform(transformedTestData)
+    let metrics = mlContext.Regression.Evaluate(prediction, label = "Label", score = "Score")
+    Console.WriteLine("The model evaluation metrics rms: " + string(metrics.Rms))
+    Console.WriteLine("=============== End of process, hit any key to finish ===============")
+    Console.ReadLine()
 
     0 // return an integer exit code
