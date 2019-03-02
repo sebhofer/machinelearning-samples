@@ -22,21 +22,20 @@ type MovieRating =
         [<LoadColumn(1)>]
         MovieId: double
         [<LoadColumn(2)>]
-        Label : float
+        Label : single
     }
 
 [<CLIMutable>]
 type MovieRatingPrediction =
     {
-        Label : float
-        Score : float
+        Label : single
+        Score : single
     }
 
 // Using the ml-latest-small.zip as dataset from https://grouplens.org/datasets/movielens/.
 let modelsLocation = @"../../../../MLModels"
 
 let datasetsLocation = @"../Data"
-//let datasetsLocation = "C:/Users/shofer/Documents/machinelearning-samples/samples/fsharp/getting-started/MatrixFactorization_MovieRecommendationFs/Data"
 let trainingDataLocation = sprintf @"%s/recommendation-ratings-train.csv" datasetsLocation
 let testDataLocation = sprintf @"%s/recommendation-ratings-test.csv" datasetsLocation
 let moviesDataLocation = sprintf @"%s/movies.csv" datasetsLocation
@@ -87,7 +86,6 @@ let main argv =
     printfn "data %O" (transformedTrainingData.Preview(5))
 
     let trainedModel =
-        //dataProcessingPipeline.Append(matrixFactorizationTrainer).Fit(trainingData)
         matrixFactorizationTrainer.Fit(transformedTrainingData)
 
     let predictions = trainedModel.Transform(transformedTestData)
@@ -96,7 +94,7 @@ let main argv =
 
     let metrics = mlContext.Regression.Evaluate(predictions, label = "Label", score = "Score")
 
-    //printfn "metrics: %O" metrics.Rms
+    printfn "metrics: %O" metrics.Rms
 
 
     0 // return an integer exit code
